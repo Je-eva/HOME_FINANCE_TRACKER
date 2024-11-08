@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Financial Management Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-primary: #f0f4f8;
@@ -33,11 +34,17 @@
             padding: 20px 0;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        h1 {
+        h1, h2 {
             margin: 0;
-            font-size: 2.5em;
             color: var(--accent-primary);
+        }
+        h1 {
+            font-size: 2.5em;
             text-align: center;
+        }
+        h2 {
+            font-size: 1.5em;
+            margin-top: 20px;
         }
         .dashboard {
             display: flex;
@@ -53,11 +60,6 @@
             width: calc(50% - 10px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
-        .card h2 {
-            color: var(--accent-primary);
-            margin-top: 0;
-            font-size: 1.5em;
-        }
         .form-group {
             margin-bottom: 15px;
         }
@@ -68,7 +70,8 @@
         }
         input[type="text"],
         input[type="number"],
-        input[type="date"] {
+        input[type="date"],
+        select {
             width: 100%;
             padding: 8px;
             border: 1px solid #e2e8f0;
@@ -112,17 +115,14 @@
         #records-table tr:nth-child(even) {
             background-color: #f8fafc;
         }
-        #plot-container {
-            margin-top: 30px;
+        .chart-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
             background-color: var(--bg-secondary);
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-        #plot-image {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
         }
     </style>
 </head>
@@ -190,12 +190,52 @@
                 <tbody id="records-body"></tbody>
             </table>
         </div>
-        <div id="plot-container">
+        <div class="chart-container">
+            <h2>User-Specific Income and Expense Comparison</h2>
+            <canvas id="user-income-expense-chart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h2>User Contribution</h2>
+            <canvas id="user-contribution-chart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h2>User-Specific Chart</h2>
+            <div class="form-group">
+                <label for="user-select">Select User:</label>
+                <select id="user-select"></select>
+            </div>
+            <div class="form-group">
+                <label for="date-range">Date Range:</label>
+                <select id="date-range">
+                    <option value="all">All Time</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+            <div id="custom-date-range" style="display: none;">
+                <div class="form-group">
+                    <label for="user-start-date">Start Date:</label>
+                    <input type="date" id="user-start-date">
+                </div>
+                <div class="form-group">
+                    <label for="user-end-date">End Date:</label>
+                    <input type="date" id="user-end-date">
+                </div>
+            </div>
+            <button id="fetch-user-data">Fetch User Data</button>
+            <canvas id="user-specific-chart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h2>Monthly Expense Trends by User</h2>
+            <canvas id="monthly-expense-trends-chart"></canvas>
+        </div>
+        <div id="plot-container" class="chart-container">
             <h2>Financial Overview</h2>
             <img id="plot-image" src="" alt="Financial Overview Plot">
         </div>
     </main>
     <script>
+        let userIncomeExpenseChart, userContributionChart, userSpecificChart, monthlyExpenseTrendsChart;
+
         document.getElementById('add-record-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = {
@@ -229,6 +269,9 @@
             const records = await response.json();
             displayRecords(records);
             fetchPlot(startDate, endDate);
+            fetchUserIncomeExpense(startDate, endDate);
+            fetchUserContribution();
+            fetchMonthlyExpenseTrends();
         }
 
         function displayRecords(records) {
@@ -251,6 +294,239 @@
                 document.getElementById('plot-image').src = `data:image/png;base64,${result.plot}`;
             }
         }
+
+        async function fetchUserIncomeExpense(startDate, endDate) {
+            const response = await fetch(`/api/user-income-expense?start=${startDate}&end=${endDate}`);
+            const data = await response.json();
+            displayUserIncomeExpenseChart(data);
+        }
+
+        async function fetchUserContribution() {
+            const response = await fetch('/api/user-contribution');
+            const data = await response.json();
+            displayUserContributionChart(data);
+        }
+
+        function displayUserIncomeExpenseChart(data) {
+            const ctx = document.getElementById('user-income-expense-chart').getContext('2d');
+            if (userIncomeExpenseChart) {
+                userIncomeExpenseChart.destroy();
+            }
+            userIncomeExpenseChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(item => item.Name),
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: data.map(item => item.Income),
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Expense',
+                            data: data.map(item => item.Expense),
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'User-Specific Income and Expense Comparison'
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayUserContributionChart(data) {
+            const ctx = document.getElementById('user-contribution-chart').getContext('2d');
+            if (userContributionChart) {
+                userContributionChart.destroy();
+            }
+            userContributionChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: data.map(item => item.Name),
+                    datasets: [
+                        {
+                            data: data.map(item => item.Income + item.Expense),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.6)',
+                                'rgba(54, 162, 235, 0.6)',
+                                'rgba(255, 206, 86, 0.6)',
+                                'rgba(75, 192, 192, 0.6)',
+                                'rgba(153, 102, 255, 0.6)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)'
+                            ],
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'User Contribution (Income + Expense)'
+                        }
+                    }
+                }
+            });
+        }
+
+        async function fetchUsernames() {
+            const response = await fetch('/api/usernames');
+            const usernames = await response.json();
+            const userSelect = document.getElementById('user-select');
+            userSelect.innerHTML = '';
+            usernames.forEach(username => {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = username;
+                userSelect.appendChild(option);
+            });
+        }
+
+        document.getElementById('date-range').addEventListener('change', function() {
+            const customDateRange = document.getElementById('custom-date-range');
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'block';
+            } else {
+                customDateRange.style.display = 'none';
+            }
+        });
+
+        document.getElementById('fetch-user-data').addEventListener('click', async function() {
+            const username = document.getElementById('user-select').value;
+            const dateRange = document.getElementById('date-range').value;
+            let startDate, endDate;
+            if (dateRange === 'custom') {
+                startDate = document.getElementById('user-start-date').value;
+                endDate = document.getElementById('user-end-date').value;
+            }
+            const response = await fetch(`/api/user-data/${username}${startDate && endDate ? `?start=${startDate}&end=${endDate}` : ''}`);
+            const data = await response.json();
+            displayUserSpecificChart(data);
+        });
+
+        function displayUserSpecificChart(data) {
+            const ctx = document.getElementById('user-specific-chart').getContext('2d');
+            if (userSpecificChart) {
+                userSpecificChart.destroy();
+            }
+            const incomeData = data.filter(item => item.Expenses_Income === 'income').map(item => ({ x: item.Date, y: item.COST }));
+            const expenseData = data.filter(item => item.Expenses_Income === 'expense').map(item => ({ x: item.Date, y: item.COST }));
+            userSpecificChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: incomeData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            fill: true
+                        },
+                        {
+                            label: 'Expense',
+                            data: expenseData,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'User-Specific Income and Expense Over Time'
+                        }
+                    }
+                }
+            });
+        }
+
+        async function fetchMonthlyExpenseTrends() {
+            const response = await fetch('/api/monthly-expense-trends');
+            const data = await response.json();
+            displayMonthlyExpenseTrendsChart(data);
+        }
+
+        function displayMonthlyExpenseTrendsChart(data) {
+            const ctx = document.getElementById('monthly-expense-trends-chart').getContext('2d');
+            if (monthlyExpenseTrendsChart) {
+                monthlyExpenseTrendsChart.destroy();
+            }
+            const users = [...new Set(data.map(item => item.Name))];
+            const months = [...new Set(data.map(item => item.Month))];
+            const datasets = users.map(user => ({
+                label: user,
+                data: months.map(month => {
+                    const entry = data.find(item => item.Name === user && item.Month === month);
+                    return entry ? entry.Expense : 0;
+                }),
+                backgroundColor: `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.6)`,
+            }));
+            monthlyExpenseTrendsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            stacked: true,
+                        },
+                        y: {
+                            stacked: true
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Monthly Expense Trends by User'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initial fetch
+        fetchRecords();
+        fetchUsernames();
     </script>
 </body>
 </html>
