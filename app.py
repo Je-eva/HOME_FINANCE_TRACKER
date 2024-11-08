@@ -12,7 +12,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Connect to the database
-connection = mysql.connect(host="localhost", user="root", password="123456", database="jeeva")
+connection = mysql.connect(host="localhost", user="root", password="xxxxxx", database="xxxxx")
 
 # Function to create the table if it doesn't exist
 def create_table():
