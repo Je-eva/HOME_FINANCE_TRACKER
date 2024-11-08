@@ -12,7 +12,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Connect to the database
-connection = mysql.connect(host="localhost", user="root", password="xxxxxx", database="xxxxx")
+connection = mysql.connect(host="localhost", user="root", password="123456", database="jeeva")
 
 # Function to create the table if it doesn't exist
 def create_table():
@@ -172,6 +172,124 @@ def handle_plot():
             return jsonify({"message": "No data available for the specified date range"}), 404
     else:
         return jsonify({"message": "Start date and end date are required"}), 400
+
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
+import pymysql as mysql
+from datetime import datetime
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import io
+import base64
+
+app = Flask(__name__)
+CORS(app)
+
+# ... (keep all the existing code)
+
+# New function to get user-specific data
+def get_user_data(username, start_date=None, end_date=None):
+    with connection.cursor() as cursor:
+        if start_date and end_date:
+            query = """
+            SELECT Date, COST, Expenses_Income
+            FROM financial_records
+            WHERE Name = %s AND Date BETWEEN %s AND %s
+            ORDER BY Date
+            """
+            cursor.execute(query, (username, start_date, end_date))
+        else:
+            query = """
+            SELECT Date, COST, Expenses_Income
+            FROM financial_records
+            WHERE Name = %s
+            ORDER BY Date
+            """
+            cursor.execute(query, (username,))
+        records = cursor.fetchall()
+    return [dict(zip(['Date', 'COST', 'Expenses_Income'], record)) for record in records]
+
+# New function to get monthly expense trends for all users
+def get_monthly_expense_trends():
+    with connection.cursor() as cursor:
+        query = """
+        SELECT Name, DATE_FORMAT(Date, '%Y-%m') as Month, SUM(CASE WHEN Expenses_Income = 'expense' THEN COST ELSE 0 END) as Expense
+        FROM financial_records
+        GROUP BY Name, DATE_FORMAT(Date, '%Y-%m')
+        ORDER BY Name, Month
+        """
+        cursor.execute(query)
+        records = cursor.fetchall()
+    return [dict(zip(['Name', 'Month', 'Expense'], record)) for record in records]
+
+# New API endpoint for user-specific data
+@app.route('/api/user-data/<username>', methods=['GET'])
+def handle_user_data(username):
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    data = get_user_data(username, start_date, end_date)
+    return jsonify(data)
+
+# New API endpoint for monthly expense trends
+@app.route('/api/monthly-expense-trends', methods=['GET'])
+def handle_monthly_expense_trends():
+    data = get_monthly_expense_trends()
+    return jsonify(data)
+
+# New API endpoint to get all usernames
+@app.route('/api/usernames', methods=['GET'])
+def handle_usernames():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT Name FROM financial_records")
+        usernames = [row[0] for row in cursor.fetchall()]
+    return jsonify(usernames)
+
+# ... (keep the rest of the existing code)
+def get_user_income_expense(start_date, end_date):
+    with connection.cursor() as cursor:
+        query = """
+        SELECT Name, 
+               SUM(CASE WHEN Expenses_Income = 'income' THEN COST ELSE 0 END) as Income,
+               SUM(CASE WHEN Expenses_Income = 'expense' THEN COST ELSE 0 END) as Expense
+        FROM financial_records
+        WHERE Date BETWEEN %s AND %s
+        GROUP BY Name
+        """
+        cursor.execute(query, (start_date, end_date))
+        records = cursor.fetchall()
+    return [dict(zip(['Name', 'Income', 'Expense'], record)) for record in records]
+
+# New function to get user contribution data
+def get_user_contribution():
+    with connection.cursor() as cursor:
+        query = """
+        SELECT Name, 
+               SUM(CASE WHEN Expenses_Income = 'income' THEN COST ELSE 0 END) as Income,
+               SUM(CASE WHEN Expenses_Income = 'expense' THEN COST ELSE 0 END) as Expense
+        FROM financial_records
+        GROUP BY Name
+        """
+        cursor.execute(query)
+        records = cursor.fetchall()
+    return [dict(zip(['Name', 'Income', 'Expense'], record)) for record in records]
+
+# New API endpoint for user-specific income and expense comparison
+@app.route('/api/user-income-expense', methods=['GET'])
+def handle_user_income_expense():
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    if start_date and end_date:
+        data = get_user_income_expense(start_date, end_date)
+        return jsonify(data)
+    else:
+        return jsonify({"message": "Start date and end date are required"}), 400
+
+# New API endpoint for user contribution
+@app.route('/api/user-contribution', methods=['GET'])
+def handle_user_contribution():
+    data = get_user_contribution()
+    return jsonify(data)
 
 if __name__ == '__main__':
     create_table()
