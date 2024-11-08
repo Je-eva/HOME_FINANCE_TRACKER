@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Management Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --accent-primary: #4299e1;
+            --accent-secondary: #63b3ed;
+            --success: #48bb78;
+            --danger: #f56565;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: var(--bg-secondary);
+            padding: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.5em;
+            color: var(--accent-primary);
+            text-align: center;
+        }
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        .card {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            width: calc(50% - 10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .card h2 {
+            color: var(--accent-primary);
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="date"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        button {
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: var(--accent-secondary);
+        }
+        #records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: var(--bg-secondary);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #records-table th,
+        #records-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        #records-table th {
+            background-color: var(--accent-primary);
+            color: white;
+            font-weight: bold;
+        }
+        #records-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        #plot-container {
+            margin-top: 30px;
+            background-color: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        #plot-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Financial Management Dashboard</h1>
+        </div>
+    </header>
+    <main class="container">
+        <div class="dashboard">
+            <div class="card">
+                <h2>Add New Record</h2>
+                <form id="add-record-form">
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cost">Cost:</label>
+                        <input type="number" id="cost" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="type">Type:</label>
+                        <input type="text" id="type" placeholder="Expense or Income" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description:</label>
+                        <input type="text" id="description" required>
+                    </div>
+                    <button type="submit">Add Record</button>
+                </form>
+            </div>
+            <div class="card">
+                <h2>Fetch Records</h2>
+                <form id="fetch-records-form">
+                    <div class="form-group">
+                        <label for="start-date">Start Date:</label>
+                        <input type="date" id="start-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end-date">End Date:</label>
+                        <input type="date" id="end-date" required>
+                    </div>
+                    <button type="submit">Fetch Records</button>
+                </form>
+            </div>
+        </div>
+        <div id="records-container">
+            <h2>Financial Records</h2>
+            <table id="records-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Name</th>
+                        <th>Cost</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody id="records-body"></tbody>
+            </table>
+        </div>
+        <div id="plot-container">
+            <h2>Financial Overview</h2>
+            <img id="plot-image" src="" alt="Financial Overview Plot">
+        </div>
+    </main>
+    <script>
+        document.getElementById('add-record-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                date: document.getElementById('date').value,
+                name: document.getElementById('name').value,
+                cost: document.getElementById('cost').value,
+                type: document.getElementById('type').value,
+                description: document.getElementById('description').value
+            };
+            const response = await fetch('/api/records', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            const result = await response.json();
+            alert(result.message);
+            fetchRecords();
+        });
+
+        document.getElementById('fetch-records-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            fetchRecords();
+        });
+
+        async function fetchRecords() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const response = await fetch(`/api/records?start=${startDate}&end=${endDate}`);
+            const records = await response.json();
+            displayRecords(records);
+            fetchPlot(startDate, endDate);
+        }
+
+        function displayRecords(records) {
+            const tbody = document.getElementById('records-body');
+            tbody.innerHTML = '';
+            records.forEach(record => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = record.Date;
+                row.insertCell(1).textContent = record.Name;
+                row.insertCell(2).textContent = record.COST;
+                row.insertCell(3).textContent = record.Expenses_Income;
+                row.insertCell(4).textContent = record.Description;
+            });
+        }
+
+        async function fetchPlot(startDate, endDate) {
+            const response = await fetch(`/api/plot?start=${startDate}&end=${endDate}`);
+            const result = await response.json();
+            if (result.plot) {
+                document.getElementById('plot-image').src = `data:image/png;base64,${result.plot}`;
+            }
+        }
+    </script>
+</body>
+</html>
